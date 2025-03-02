@@ -23,7 +23,7 @@ export const uploadMedia = async (req, res) => {
 
         const media = new Media({
             title,
-            fileUrl: uploadedFile.secure_url, // Cloudinary URL
+            fileUrl: uploadedFile.secure_url, 
             fileType,
             uploadedBy: req.user.id,
         });

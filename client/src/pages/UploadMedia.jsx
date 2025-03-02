@@ -241,8 +241,8 @@ export default function MediaManager() {
 }
 
 function MediaList({ media, filter, fetchComments, comments, newComment, handleCommentChange, handleAddComment }) {
-  const [replyBox, setReplyBox] = useState({}); // ✅ State to track which comment's reply box is open
-  const [replyText, setReplyText] = useState({}); // ✅ State to track text input for replies
+  const [replyBox, setReplyBox] = useState({}); 
+  const [replyText, setReplyText] = useState({}); 
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -291,7 +291,7 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
                   onClick={() =>
                     setReplyBox((prev) => ({
                       ...prev,
-                      [comment._id]: !prev[comment._id], // Toggle reply box
+                      [comment._id]: !prev[comment._id],
                     }))
                   }
                 >
@@ -305,20 +305,20 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
                       type="text"
                       placeholder="Write a reply..."
                       className="border p-1 rounded w-full mt-2"
-                      value={replyText[comment._id] || ""} // ✅ Use replyText state for input value
+                      value={replyText[comment._id] || ""}
                       onChange={(e) =>
                         setReplyText((prev) => ({
                           ...prev,
-                          [comment._id]: e.target.value, // ✅ Track reply text
+                          [comment._id]: e.target.value, 
                         }))
                       }
                     />
                     <button
                       className="bg-blue-500 text-white px-2 py-1 rounded mt-1"
                       onClick={() => {
-                        handleAddComment(item._id, comment._id, replyText[comment._id]); // ✅ Pass replyText value
-                        setReplyBox((prev) => ({ ...prev, [comment._id]: false })); // ✅ Hide reply box after submission
-                        setReplyText((prev) => ({ ...prev, [comment._id]: "" })); // ✅ Clear input field
+                        handleAddComment(item._id, comment._id, replyText[comment._id]); 
+                        setReplyBox((prev) => ({ ...prev, [comment._id]: false }));
+                        setReplyText((prev) => ({ ...prev, [comment._id]: "" })); 
                       }}
                     >
                       Submit Reply

@@ -5,9 +5,9 @@ import { verifyToken } from "../utils/verifyUser.js";
 
 const router = express.Router();
 
-router.post("/upload", verifyToken, upload.single("file"), uploadMedia); // Upload media
-router.get("/", getAllMedia); // Retrieve all media (with optional category filter)
-router.get("/user", verifyToken, getUserMedia); // Retrieve logged-in user's media
-router.delete("/:id", verifyToken, deleteMedia); // Delete media (only by uploader)
+router.post("/upload", verifyToken, upload.single("file"), uploadMedia); 
+router.get("/", getAllMedia); 
+router.get("/user", verifyToken, getUserMedia); 
+router.delete("/:id", verifyToken, deleteMedia); 
 
 export default router;
