@@ -109,41 +109,47 @@ export default function MediaManager() {
     setLoading(false);
   };
 
-  const fetchComments = async (mediaId) => {
-    try {
-      const response = await fetch(`http://localhost:3000/api/comments/${mediaId}`);
-      const data = await response.json();
-      setComments((prev) => ({ ...prev, [mediaId]: data }));
-    } catch (error) {
-      console.error("Failed to fetch comments:", error);
-    }
-  };
+ const fetchComments = async (mediaId) => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/comments/${mediaId}`);
+    const data = await response.json();
 
+    // Ensure data structure consistency
+    setComments((prev) => ({
+      ...prev,
+      [mediaId]: Array.isArray(data) ? data : [],
+    }));
+  } catch (error) {
+    console.error("Failed to fetch comments:", error);
+  }
+};
   const handleCommentChange = (mediaId, text) => {
     setNewComment((prev) => ({ ...prev, [mediaId]: text }));
   };
 
-  const handleAddComment = async (mediaId, parentId = null) => {
-    if (!newComment[mediaId]) return;
+const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
+  const text = replyText || newComment[mediaId]; // Use reply text if provided
 
-    try {
-      const response = await fetch("http://localhost:3000/api/comments", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mediaId, text: newComment[mediaId], parentId }),
-      });
+  if (!text) return;
 
-      if (response.ok) {
-        fetchComments(mediaId);
-        setNewComment((prev) => ({ ...prev, [mediaId]: "" }));
-      } else {
-        console.error("Failed to add comment.");
-      }
-    } catch (error) {
-      console.error("Failed to add comment:", error);
+  try {
+    const response = await fetch("http://localhost:3000/api/comments", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mediaId, text, parentId }),
+    });
+
+    if (response.ok) {
+      fetchComments(mediaId); // Refresh comments after posting
+      setNewComment((prev) => ({ ...prev, [mediaId]: "" }));
+    } else {
+      console.error("Failed to add comment.");
     }
-  };
+  } catch (error) {
+    console.error("Failed to add comment:", error);
+  }
+};
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -251,9 +257,9 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
         .map((item) => (
           <div key={item._id} className="border p-2 rounded shadow-md">
             <h3 className="font-semibold">{item.title}</h3>
-            <p className="text-sm text-gray-600">
-              Uploaded by: {item.uploadedBy?.name || "Unknown"}
-            </p>
+            <h3 className="text-sm text-gray-600">
+  Uploaded by: {item.uploadedBy?.name || "Unknown"}
+</h3>
 
             {item.fileType === "image" && <img src={item.fileUrl} alt={item.title} className="w-full h-40 object-cover mt-2" />}
             {item.fileType === "video" && <video controls className="w-full h-40 mt-2"><source src={item.fileUrl} type="video/mp4" /></video>}
@@ -328,11 +334,11 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
 
                 {/* ✅ Show Replies (Nested Comments) */}
                 {comment.replies?.map((reply) => (
-                  <div key={reply._id} className="ml-6 border-l pl-4 my-2">
-                    <p className="text-sm font-semibold">{reply.userId.name}:</p>
-                    <p>{reply.text}</p>
-                  </div>
-                ))}
+  <div key={reply._id} className="ml-6 border-l pl-4 my-2">
+    <p className="text-sm font-semibold">{reply.userId?.name || "Unknown"}:</p>
+    <p>{reply.text}</p>
+  </div>
+))}
               </div>
             ))}
           </div>
