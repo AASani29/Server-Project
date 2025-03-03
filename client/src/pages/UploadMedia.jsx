@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "../redux/user/userSlice";
+import { Link } from "react-router-dom";
 
 export default function MediaManager() {
   const [file, setFile] = useState(null);
@@ -14,6 +15,9 @@ export default function MediaManager() {
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState(false);
+  const [reportModal, setReportModal] = useState(false);
+  const [reportItem, setReportItem] = useState(null);
+  const [reportReason, setReportReason] = useState("");
 
   const { currentUser } = useSelector((state) => state.user);
   const dispatch = useDispatch();
@@ -39,12 +43,11 @@ export default function MediaManager() {
     }
     setLoading(false);
   };
-    // Handle file selection
+
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // Upload media
   const handleUpload = async () => {
     if (!file) {
       setMessage("Please select a file first!");
@@ -77,7 +80,7 @@ export default function MediaManager() {
         setMessage("File uploaded successfully!");
         setTitle("");
         setFile(null);
-        fetchUserMedia(); // Refresh user media list
+        fetchUserMedia();
       } else {
         setMessage(data.message);
       }
@@ -109,47 +112,77 @@ export default function MediaManager() {
     setLoading(false);
   };
 
- const fetchComments = async (mediaId) => {
-  try {
-    const response = await fetch(`http://localhost:3000/api/comments/${mediaId}`);
-    const data = await response.json();
+  const fetchComments = async (mediaId) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/comments/${mediaId}`);
+      const data = await response.json();
 
-    // Ensure data structure consistency
-    setComments((prev) => ({
-      ...prev,
-      [mediaId]: Array.isArray(data) ? data : [],
-    }));
-  } catch (error) {
-    console.error("Failed to fetch comments:", error);
-  }
-};
+      setComments((prev) => ({
+        ...prev,
+        [mediaId]: Array.isArray(data) ? data : [],
+      }));
+    } catch (error) {
+      console.error("Failed to fetch comments:", error);
+    }
+  };
+
   const handleCommentChange = (mediaId, text) => {
     setNewComment((prev) => ({ ...prev, [mediaId]: text }));
   };
 
-const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
-  const text = replyText || newComment[mediaId]; // Use reply text if provided
+  const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
+    const text = replyText || newComment[mediaId];
 
-  if (!text) return;
+    if (!text) return;
 
-  try {
-    const response = await fetch("http://localhost:3000/api/comments", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mediaId, text, parentId }),
-    });
+    try {
+      const response = await fetch("http://localhost:3000/api/comments", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaId, text, parentId }),
+      });
 
-    if (response.ok) {
-      fetchComments(mediaId); // Refresh comments after posting
-      setNewComment((prev) => ({ ...prev, [mediaId]: "" }));
-    } else {
-      console.error("Failed to add comment.");
+      if (response.ok) {
+        fetchComments(mediaId);
+        setNewComment((prev) => ({ ...prev, [mediaId]: "" }));
+      } else {
+        console.error("Failed to add comment.");
+      }
+    } catch (error) {
+      console.error("Failed to add comment:", error);
     }
-  } catch (error) {
-    console.error("Failed to add comment:", error);
-  }
-};
+  };
+
+  const handleReport = async () => {
+    if (!reportItem || !reportReason) {
+      setMessage("Please provide a reason for reporting.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/api/reports", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: reportItem,
+          itemType: "media",
+          reason: reportReason,
+        }),
+      });
+
+      if (response.ok) {
+        setMessage("Report submitted successfully.");
+        setReportModal(false);
+        setReportReason("");
+      } else {
+        setMessage("Failed to submit report.");
+      }
+    } catch (error) {
+      setMessage("Error submitting report.");
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -162,15 +195,17 @@ const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
       {currentUser && (
         <div className="flex items-center justify-between mb-4 p-4 border rounded-lg bg-gray-100">
           <div className="flex items-center">
-            <img
-              src={currentUser.profilePicture}
-              alt="profile"
-              className="h-12 w-12 rounded-full object-cover"
-            />
-            <div className="ml-4">
-              <h3 className="text-xl font-semibold">{currentUser.name}</h3>
-              <p className="text-gray-600">{currentUser.email}</p>
-            </div>
+            <Link to="/profile" className="flex items-center cursor-pointer">
+              <img
+                src={currentUser.profilePicture}
+                alt="profile"
+                className="h-12 w-12 rounded-full object-cover"
+              />
+              <div className="ml-4">
+                <h3 className="text-xl font-semibold">{currentUser.name}</h3>
+                <p className="text-gray-600">{currentUser.username}</p>
+              </div>
+            </Link>
           </div>
           <button
             onClick={() => {
@@ -189,7 +224,6 @@ const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
       )}
 
       <h2 className="text-2xl font-semibold mb-4 text-center">Media Manager</h2>
-      {/* Upload Section */}
       <div className="mb-6">
         <input
           type="text"
@@ -230,6 +264,8 @@ const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
         newComment={newComment} 
         handleCommentChange={handleCommentChange} 
         handleAddComment={handleAddComment} 
+        setReportItem={setReportItem}
+        setReportModal={setReportModal}
       />
 
       <h3 className="text-xl font-semibold mt-6 mb-4">Your Uploads</h3>
@@ -241,12 +277,36 @@ const handleAddComment = async (mediaId, parentId = null, replyText = null) => {
         newComment={newComment} 
         handleCommentChange={handleCommentChange} 
         handleAddComment={handleAddComment} 
+        setReportItem={setReportItem}
+        setReportModal={setReportModal}
       />
+
+      {reportModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow-lg w-96">
+            <h3 className="text-lg font-semibold">Report Media</h3>
+            <textarea
+              className="border p-2 w-full mt-2"
+              placeholder="Enter reason for reporting..."
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+            />
+            <div className="flex justify-end mt-4">
+              <button className="bg-gray-300 px-4 py-2 rounded mr-2" onClick={() => setReportModal(false)}>
+                Cancel
+              </button>
+              <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={handleReport}>
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function MediaList({ media, filter, fetchComments, comments, newComment, handleCommentChange, handleAddComment }) {
+function MediaList({ media, filter, fetchComments, comments, newComment, handleCommentChange, handleAddComment, setReportItem, setReportModal }) {
   const [replyBox, setReplyBox] = useState({}); 
   const [replyText, setReplyText] = useState({}); 
 
@@ -258,17 +318,26 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
           <div key={item._id} className="border p-2 rounded shadow-md">
             <h3 className="font-semibold">{item.title}</h3>
             <h3 className="text-sm text-gray-600">
-  Uploaded by: {item.uploadedBy?.name || "Unknown"}
-</h3>
+              Uploaded by: {item.uploadedBy?.name || "Unknown"}
+            </h3>
 
             {item.fileType === "image" && <img src={item.fileUrl} alt={item.title} className="w-full h-40 object-cover mt-2" />}
             {item.fileType === "video" && <video controls className="w-full h-40 mt-2"><source src={item.fileUrl} type="video/mp4" /></video>}
+
+            <button
+              className="text-red-500 mt-2"
+              onClick={() => {
+                setReportItem(item._id);
+                setReportModal(true);
+              }}
+            >
+              Report
+            </button>
 
             <button className="text-blue-500 mt-2" onClick={() => fetchComments(item._id)}>
               Load Comments
             </button>
 
-            {/* Comment Input */}
             <div className="mt-2">
               <input
                 type="text"
@@ -285,13 +354,11 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
               </button>
             </div>
 
-            {/* Display Comments */}
             {comments[item._id]?.map((comment) => (
               <div key={comment._id} className="border-l pl-4 my-2">
                 <p className="text-sm font-semibold">{comment.userId.name}:</p>
                 <p>{comment.text}</p>
 
-                {/* ✅ Reply Button - Toggles Reply Box */}
                 <button
                   className="text-blue-500 text-xs mt-1"
                   onClick={() =>
@@ -304,7 +371,6 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
                   Reply
                 </button>
 
-                {/* ✅ Conditionally show reply input box */}
                 {replyBox[comment._id] && (
                   <div className="mt-2 ml-4">
                     <input
@@ -332,13 +398,12 @@ function MediaList({ media, filter, fetchComments, comments, newComment, handleC
                   </div>
                 )}
 
-                {/* ✅ Show Replies (Nested Comments) */}
                 {comment.replies?.map((reply) => (
-  <div key={reply._id} className="ml-6 border-l pl-4 my-2">
-    <p className="text-sm font-semibold">{reply.userId?.name || "Unknown"}:</p>
-    <p>{reply.text}</p>
-  </div>
-))}
+                  <div key={reply._id} className="ml-6 border-l pl-4 my-2">
+                    <p className="text-sm font-semibold">{reply.userId?.name || "Unknown"}:</p>
+                    <p>{reply.text}</p>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
